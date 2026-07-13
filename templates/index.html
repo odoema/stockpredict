@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}StockPredict — Market prediction, from research notebook to terminal{% endblock %}
+{% block content %}
+
+<div class="sp-ticker-tape" aria-hidden="true">
+  <div class="sp-ticker-track">
+    {% for t in ['IVV','SPY','QQQ','VOO','AAPL','MSFT','GOOGL','AMZN','META','TSLA','NVDA','BTC-USD','ETH-USD','EURUSD=X','GC=F','CL=F'] * 2 %}
+    <span class="sp-ticker-item">{{ t }}</span>
+    {% endfor %}
+  </div>
+</div>
+
+<section class="sp-hero">
+  <div class="sp-hero-inner">
+    <p class="sp-eyebrow">Any Yahoo Finance symbol &middot; 19 indicators &middot; 4 models, more on the way</p>
+    <h1 class="sp-hero-title">Turn raw price history<br>into a next-day signal.</h1>
+    <p class="sp-hero-sub">
+      StockPredict runs the full research pipeline &mdash; data quality, EDA, feature
+      engineering, feature selection, model training, and prediction &mdash; on
+      whatever ticker you give it, live, in the browser.
+    </p>
+    <div class="sp-hero-cta">
+      <a href="{{ url_for('views.dashboard') }}" class="btn sp-btn-primary">Start Analysis</a>
+      <a href="{{ url_for('views.eda') }}" class="btn sp-btn-ghost">Explore the data first</a>
+    </div>
+  </div>
+  <div class="sp-hero-panel">
+    <div class="sp-mini-chart" id="hero-sparkline"></div>
+    <div class="sp-hero-panel-caption">IVV &middot; 6 month close, illustrative</div>
+  </div>
+</section>
+
+<section class="sp-pipeline">
+  <div class="sp-pipeline-inner">
+    {% set steps = [
+      ("Ingest", "Pull OHLCV history for any ticker, cached and validated."),
+      ("Diagnose", "Missingness, duplicates, coverage — before you trust a chart."),
+      ("Engineer", "19 trend, momentum, volatility and volume indicators."),
+      ("Select", "Correlation, mutual information, RF importance, variance."),
+      ("Predict", "Logistic Regression, Random Forest, XGBoost, LightGBM.")
+    ] %}
+    {% for name, desc in steps %}
+    <div class="sp-pipeline-step">
+      <div class="sp-pipeline-step-name">{{ name }}</div>
+      <div class="sp-pipeline-step-desc">{{ desc }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Small illustrative sparkline so the hero isn't just text — replaced by
+// real data automatically once a ticker is analysed on the dashboard.
+(function () {
+  const points = Array.from({length: 60}, (_, i) => 100 + Math.sin(i / 5) * 4 + i * 0.35 + (Math.random() - 0.5) * 2);
+  Plotly.newPlot('hero-sparkline', [{
+    y: points, type: 'scatter', mode: 'lines', line: {color: '#2DD4BF', width: 2}, hoverinfo: 'skip'
+  }], {
+    margin: {l: 0, r: 0, t: 0, b: 0}, paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+    xaxis: {visible: false}, yaxis: {visible: false}, showlegend: false
+  }, {displayModeBar: false, staticPlot: true, responsive: true});
+})();
+</script>
+{% endblock %}

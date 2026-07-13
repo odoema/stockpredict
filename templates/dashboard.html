@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — StockPredict{% endblock %}
+{% block content %}
+<div class="sp-page">
+
+  <div class="sp-control-panel" id="control-panel">
+    <div class="sp-control-row">
+      <div class="sp-control-group sp-control-ticker">
+        <label for="ticker-input">Ticker</label>
+        <input list="ticker-list" id="ticker-input" class="sp-input" value="{{ default_ticker }}" autocomplete="off" placeholder="e.g. AAPL, BTC-USD, GC=F">
+        <datalist id="ticker-list">
+          {% for t in popular_tickers %}<option value="{{ t }}">{% endfor %}
+        </datalist>
+      </div>
+
+      <div class="sp-control-group">
+        <label for="start-date">Start date</label>
+        <input type="date" id="start-date" class="sp-input">
+      </div>
+      <div class="sp-control-group">
+        <label for="end-date">End date</label>
+        <input type="date" id="end-date" class="sp-input">
+      </div>
+
+      <div class="sp-control-group">
+        <label for="target-select">Prediction target</label>
+        <select id="target-select" class="sp-input">
+          <option value="next_day_direction">Next-day direction (up/down)</option>
+          <option value="next_day_return">Next-day return (%)</option>
+          <option value="next_day_price">Next-day price</option>
+        </select>
+      </div>
+
+      <div class="sp-control-group">
+        <label for="feature-select-method">Feature selection</label>
+        <select id="feature-select-method" class="sp-input">
+          <option value="none">None (use all)</option>
+          <option value="correlation">Correlation</option>
+          <option value="mutual_information">Mutual Information</option>
+          <option value="random_forest_importance" selected>Random Forest Importance</option>
+          <option value="variance_threshold">Variance Threshold</option>
+        </select>
+      </div>
+
+      <div class="sp-control-group">
+        <label for="model-select">Model</label>
+        <select id="model-select" class="sp-input">
+          {% for key, label in model_registry.items() %}
+          <option value="{{ key }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="sp-control-row sp-indicator-row">
+      <div class="sp-indicator-groups" id="indicator-groups">
+        <!-- populated by dashboard.js from /api/indicators -->
+      </div>
+    </div>
+
+    <div class="sp-control-row sp-actions-row">
+      <button id="run-btn" class="btn sp-btn-primary">Run Analysis</button>
+      <button id="compare-btn" class="btn sp-btn-secondary">Compare All Models</button>
+      <button id="reset-btn" class="btn sp-btn-ghost">Reset</button>
+      <div class="dropdown">
+        <button class="btn sp-btn-ghost dropdown-toggle" data-bs-toggle="dropdown">Export</button>
+        <ul class="dropdown-menu dropdown-menu-dark">
+          <li><a class="dropdown-item" href="#" data-export="csv">CSV</a></li>
+          <li><a class="dropdown-item" href="#" data-export="json">JSON</a></li>
+        </ul>
+      </div>
+      <span id="status-badge" class="sp-status-badge">Idle</span>
+    </div>
+  </div>
+
+  <div id="error-banner" class="sp-error-banner d-none"></div>
+
+  <div class="sp-grid" id="results-grid">
+
+    <div class="sp-card sp-card-wide">
+      <div class="sp-card-header">Price History</div>
+      <div id="price-chart" class="sp-chart-tall"></div>
+    </div>
+
+    <div class="sp-card">
+      <div class="sp-card-header">Prediction</div>
+      <div id="prediction-panel" class="sp-prediction-panel">
+        <div class="sp-empty">Run analysis to generate a prediction.</div>
+      </div>
+    </div>
+
+    <div class="sp-card">
+      <div class="sp-card-header">Model Evaluation</div>
+      <div id="metrics-panel"><div class="sp-empty">No model trained yet.</div></div>
+    </div>
+
+    <div class="sp-card">
+      <div class="sp-card-header">Feature Importance</div>
+      <div id="importance-chart" class="sp-chart"></div>
+    </div>
+
+    <div class="sp-card">
+      <div class="sp-card-header">Confusion Matrix / Fit</div>
+      <div id="confusion-chart" class="sp-chart"></div>
+    </div>
+
+    <div class="sp-card sp-card-wide" id="compare-card" style="display:none;">
+      <div class="sp-card-header">Model Comparison</div>
+      <div id="compare-table"></div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

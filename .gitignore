@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.env
+data/*.parquet
+!data/.gitkeep
+.DS_Store
+venv/
+.venv/

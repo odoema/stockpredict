@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Data Quality — StockPredict{% endblock %}
+{% block content %}
+<div class="sp-page">
+  <div class="sp-control-panel">
+    <div class="sp-control-row">
+      <div class="sp-control-group sp-control-ticker">
+        <label for="ticker-input">Ticker</label>
+        <input list="ticker-list" id="ticker-input" class="sp-input" value="IVV" autocomplete="off">
+        <datalist id="ticker-list"></datalist>
+      </div>
+      <div class="sp-control-group">
+        <label for="start-date">Start date</label>
+        <input type="date" id="start-date" class="sp-input">
+      </div>
+      <div class="sp-control-group">
+        <label for="end-date">End date</label>
+        <input type="date" id="end-date" class="sp-input">
+      </div>
+      <div class="sp-control-group sp-control-group-btn">
+        <button id="run-btn" class="btn sp-btn-primary">Check Data Quality</button>
+      </div>
+      <span id="status-badge" class="sp-status-badge">Idle</span>
+    </div>
+  </div>
+
+  <div id="error-banner" class="sp-error-banner d-none"></div>
+
+  <div class="sp-grid">
+    <div class="sp-card">
+      <div class="sp-card-header">Dataset Overview</div>
+      <div id="overview-panel"><div class="sp-empty">Run a check to see results.</div></div>
+    </div>
+    <div class="sp-card">
+      <div class="sp-card-header">Missing Values</div>
+      <div id="missing-panel"></div>
+    </div>
+    <div class="sp-card sp-card-wide">
+      <div class="sp-card-header">Summary Statistics</div>
+      <div id="stats-table" class="table-responsive"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/data_quality.js') }}"></script>
+{% endblock %}

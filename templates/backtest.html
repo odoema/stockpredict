@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Backtest — StockPredict{% endblock %}
+{% block content %}
+<div class="sp-page">
+
+  <div class="sp-control-panel">
+    <div class="sp-control-row">
+      <div class="sp-control-group sp-control-ticker">
+        <label for="ticker-input">Ticker</label>
+        <input list="ticker-list" id="ticker-input" class="sp-input" value="{{ default_ticker }}" autocomplete="off">
+        <datalist id="ticker-list">
+          {% for t in popular_tickers %}<option value="{{ t }}">{% endfor %}
+        </datalist>
+      </div>
+      <div class="sp-control-group">
+        <label for="start-date">Start date</label>
+        <input type="date" id="start-date" class="sp-input">
+      </div>
+      <div class="sp-control-group">
+        <label for="end-date">End date</label>
+        <input type="date" id="end-date" class="sp-input">
+      </div>
+      <div class="sp-control-group">
+        <label for="target-select">Signal target</label>
+        <select id="target-select" class="sp-input">
+          <option value="next_day_direction">Next-day direction</option>
+          <option value="next_day_return">Next-day return</option>
+        </select>
+      </div>
+      <div class="sp-control-group">
+        <label for="model-select">Model</label>
+        <select id="model-select" class="sp-input">
+          {% for key, label in model_registry.items() %}
+          <option value="{{ key }}" {{ 'selected' if key == 'random_forest' }}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="sp-control-group">
+        <label for="position-mode">Position mode</label>
+        <select id="position-mode" class="sp-input">
+          <option value="long_flat">Long / Flat</option>
+          <option value="long_short">Long / Short</option>
+        </select>
+      </div>
+      <div class="sp-control-group">
+        <label for="fee-bps">Fee (bps/trade)</label>
+        <input type="number" id="fee-bps" class="sp-input" value="5" min="0" step="0.5" style="width:90px;">
+      </div>
+    </div>
+    <div class="sp-control-row sp-actions-row">
+      <button id="run-btn" class="btn sp-btn-primary">Run Backtest</button>
+      <span class="sp-empty" style="padding:0;font-size:0.78rem;">
+        Strategy: hold the model's predicted direction each out-of-sample day, compared to buy-and-hold.
+      </span>
+      <span id="status-badge" class="sp-status-badge">Idle</span>
+    </div>
+  </div>
+
+  <div id="error-banner" class="sp-error-banner d-none"></div>
+
+  <div class="sp-grid">
+    <div class="sp-card sp-card-wide">
+      <div class="sp-card-header">Portfolio Growth &mdash; Strategy vs. Buy &amp; Hold (base 100)</div>
+      <div id="equity-chart" class="sp-chart-tall"></div>
+    </div>
+    <div class="sp-card sp-card-wide">
+      <div class="sp-card-header">Performance Metrics</div>
+      <div id="metrics-panel"><div class="sp-empty">Run a backtest to see results.</div></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/backtest.js') }}"></script>
+{% endblock %}
