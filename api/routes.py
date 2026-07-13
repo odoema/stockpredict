@@ -13,7 +13,7 @@ import logging
 
 from flask import Blueprint, Response, current_app, jsonify, request
 
-from services import backtest_service, eda_service, feature_service, indicator_service, model_service
+from services import backtest_service, eda_service, feature_service, indicator_service, model_service, portfolio_service
 from services.data_service import DataService, TickerNotFoundError
 
 api_bp = Blueprint("api", __name__)
@@ -230,6 +230,34 @@ def backtest():
             "backtest": backtest_result,
         }
     )
+
+
+# ---------------------------------------------------------------------------
+# Portfolio comparison
+# ---------------------------------------------------------------------------
+
+@api_bp.route("/portfolio", methods=["POST"])
+def portfolio_comparison():
+    payload = request.get_json(force=True) or {}
+    tickers = payload.get("tickers") or []
+    start = payload.get("start")
+    end = payload.get("end")
+
+    tickers = [t.strip().upper() for t in tickers if t and t.strip()]
+    if len(tickers) < 2:
+        raise ValueError("Provide at least 2 tickers to compare (e.g. ['IVV', 'SPY', 'QQQ']).")
+    if len(tickers) > 8:
+        raise ValueError("Please compare at most 8 tickers at a time.")
+    if not start or not end:
+        raise ValueError("Both 'start' and 'end' dates are required (YYYY-MM-DD).")
+
+    ds = _data_service()
+    price_frames = {}
+    for ticker in tickers:
+        price_frames[ticker] = ds.get_history(ticker, start, end)
+
+    comparison = portfolio_service.build_comparison(price_frames)
+    return jsonify(comparison)
 
 
 # ---------------------------------------------------------------------------

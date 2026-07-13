@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from services import backtest_service, feature_service, indicator_service, model_service
+from services import backtest_service, feature_service, indicator_service, model_service, portfolio_service
 
 
 @pytest.fixture
@@ -98,3 +98,36 @@ def test_backtest_runs_and_returns_sane_metrics(synthetic_ohlcv, allow_short):
     assert 0 <= metrics["win_rate_pct"] <= 100
     assert metrics["number_of_trades"] >= 0
     assert len(result["dates"]) == len(result["strategy_equity_curve"]) == len(result["benchmark_equity_curve"])
+
+
+def test_portfolio_comparison_requires_at_least_two_tickers(synthetic_ohlcv):
+    with pytest.raises(ValueError):
+        portfolio_service.build_comparison({"IVV": synthetic_ohlcv})
+
+
+def test_portfolio_comparison_computes_sane_metrics(synthetic_ohlcv):
+    rng = np.random.default_rng(7)
+    n = len(synthetic_ohlcv)
+    other_close = 100 + np.cumsum(rng.normal(size=n))
+    other_df = pd.DataFrame(
+        {
+            "Open": other_close,
+            "High": other_close + 1,
+            "Low": other_close - 1,
+            "Close": other_close,
+            "Volume": rng.integers(100_000, 1_000_000, n),
+        },
+        index=synthetic_ohlcv.index,
+    )
+
+    result = portfolio_service.build_comparison({"IVV": synthetic_ohlcv, "SPY": other_df})
+    assert result["benchmark"] == "IVV"
+    assert set(result["tickers"]) == {"IVV", "SPY"}
+    assert len(result["risk_metrics"]) == 2
+
+    benchmark_row = next(r for r in result["risk_metrics"] if r["ticker"] == "IVV")
+    assert benchmark_row["beta"] == 1.0
+
+    corr = result["correlation"]
+    assert corr["labels"] == ["IVV", "SPY"]
+    assert -1.0 <= corr["matrix"][0][1] <= 1.0

@@ -44,3 +44,9 @@ def backtest():
         default_ticker=cfg["DEFAULT_TICKER"],
         model_registry=cfg["MODEL_REGISTRY"],
     )
+
+
+@views_bp.route("/portfolio")
+def portfolio():
+    cfg = current_app.config
+    return render_template("portfolio.html", popular_tickers=cfg["POPULAR_TICKERS"])

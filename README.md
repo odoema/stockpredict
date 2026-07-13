@@ -5,10 +5,11 @@ notebook — data ingestion, data quality checks, EDA, feature engineering,
 feature selection, model training/evaluation, and next-day prediction —
 for **any valid Yahoo Finance ticker**, not just IVV.
 
-This is **v2 (sprints 1–2)** of the full master spec: a working end-to-end
+This is **v3 (sprints 1–3)** of the full master spec: a working end-to-end
 pipeline with a real dashboard, real data quality and EDA pages, real
-indicators, real feature selection, a 12-model registry, and a full
-backtesting page. See **Roadmap** below for what's planned next.
+indicators, real feature selection, a 12-model registry, a full
+backtesting page, and multi-ticker portfolio comparison. See **Roadmap**
+below for what's planned next.
 
 ---
 
@@ -51,6 +52,10 @@ backtesting page. See **Roadmap** below for what's planned next.
   trades, transaction-cost modelling (bps/trade), and a strategy-vs-buy-and-
   hold portfolio growth chart.
 - **Export**: CSV and JSON export of the raw + indicator dataset.
+- **Portfolio page**: compare 2–8 tickers side by side — normalised
+  performance chart (base 100), cross-asset correlation heatmap, and a risk
+  metrics table (total/annualised return, annualised volatility, Sharpe,
+  Sortino, max drawdown, beta vs. the first ticker as benchmark).
 - **Dark-mode terminal UI**: built with Bootstrap 5 + Plotly.js, no build
   step required.
 
@@ -73,6 +78,7 @@ StockPredict/
     feature_service.py   # Target construction + feature selection
     model_service.py     # Train/eval/predict/compare for the 12 models
     backtest_service.py  # Strategy simulation + performance metrics
+    portfolio_service.py # Multi-ticker performance, correlation, risk metrics
   templates/            # Jinja2 page shells (base, index, dashboard, ...)
   static/css/style.css   # Design system (dark terminal aesthetic)
   static/js/             # Per-page AJAX + Plotly logic
@@ -98,6 +104,7 @@ and to scale horizontally later — no server-side session state to manage.
 | `/api/train`            | POST   | Train one model, evaluate, predict next day                |
 | `/api/train/compare`    | POST   | Train several models, return a ranked comparison table       |
 | `/api/backtest`         | POST   | Simulate a strategy from model signals, return metrics + equity curve |
+| `/api/portfolio`        | POST   | Compare 2-8 tickers: performance, correlation, risk metrics    |
 | `/api/export`           | POST   | Download CSV/JSON of the raw + indicator dataset               |
 
 ---
@@ -179,7 +186,6 @@ half-finished everything. Still planned:
   sequence-windowed training loop, different from the tabular fit/predict
   interface the other 12 models share).
 - Additional feature selection: Recursive Feature Elimination, Boruta, PCA.
-- Portfolio page: multi-ticker comparison, correlation matrix, risk metrics.
 - Hyperparameter tuning UI, learning/validation curves.
 - PDF/PNG/`.pkl` export.
 - Ticker autocomplete backed by a real symbol search API (currently a
