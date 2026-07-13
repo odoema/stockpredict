@@ -13,7 +13,7 @@ import logging
 
 from flask import Blueprint, Response, current_app, jsonify, request
 
-from services import backtest_service, eda_service, feature_service, indicator_service, model_service, portfolio_service
+from services import backtest_service, deep_learning_service, eda_service, feature_service, indicator_service, model_service, portfolio_service
 from services.data_service import DataService, TickerNotFoundError
 
 api_bp = Blueprint("api", __name__)
@@ -154,6 +154,30 @@ def get_features():
 # Model training, comparison, and prediction
 # ---------------------------------------------------------------------------
 
+def _is_deep_model(model_key: str) -> bool:
+    return model_key in deep_learning_service.DEEP_MODEL_LABELS
+
+
+def _train_and_predict(dataset, feature_cols, target, model_key, payload):
+    """Train `model_key` (tabular or deep) and return (trained_result, prediction).
+    `trained_result` still has its internal artefact keys popped by the caller."""
+    if _is_deep_model(model_key):
+        window = int(payload.get("window", deep_learning_service.DEFAULT_WINDOW))
+        epochs = int(payload.get("epochs", 20))
+        result = deep_learning_service.train_and_evaluate(
+            dataset, feature_cols, target, model_key, window=window, epochs=epochs
+        )
+        model = result.pop("_model_object")
+        scaler = result.pop("_scaler")
+        prediction = deep_learning_service.predict_latest(model, scaler, dataset, feature_cols, target, window)
+    else:
+        result = model_service.train_and_evaluate(dataset, feature_cols, target, model_key)
+        model = result.pop("_model_object")
+        result.pop("_split_idx", None)
+        prediction = model_service.predict_latest(model, dataset, feature_cols, target)
+    return result, prediction
+
+
 @api_bp.route("/train", methods=["POST"])
 def train_model():
     payload = request.get_json(force=True) or {}
@@ -164,8 +188,7 @@ def train_model():
     selection = feature_service.select_features(dataset, method)
     feature_cols = selection["selected_features"]
 
-    result = model_service.train_and_evaluate(dataset, feature_cols, target, model_key)
-    prediction = model_service.predict_latest(result.pop("_model_object"), dataset, feature_cols, target)
+    result, prediction = _train_and_predict(dataset, feature_cols, target, model_key, payload)
     result.pop("_y_test", None)
     y_pred = result.pop("_y_pred", None)
     test_dates = result.pop("_test_dates", None)
@@ -187,14 +210,31 @@ def train_model():
 def compare_models():
     payload = request.get_json(force=True) or {}
     method = payload.get("feature_selection_method", "none")
+    # Deep learning models are excluded from the default "compare all" set
+    # since each one is far slower to train than the 12 tabular models;
+    # they can still be included explicitly via the `models` list.
     model_keys = payload.get("models") or list(model_service.MODEL_LABELS.keys())
 
     ticker, target, _indicator_df, dataset = _build_dataset(payload)
     selection = feature_service.select_features(dataset, method)
     feature_cols = selection["selected_features"]
 
-    comparison = model_service.compare_models(dataset, feature_cols, target, model_keys)
-    return jsonify({"ticker": ticker.upper(), "target": target, "comparison": comparison})
+    classification = target == "next_day_direction"
+    rows = []
+    for key in model_keys:
+        result, _prediction = _train_and_predict(dataset, feature_cols, target, key, payload)
+        row = {
+            "model": result["model_label"],
+            "train_time_seconds": result["train_time_seconds"],
+            "prediction_time_seconds": result["prediction_time_seconds"],
+            **result["metrics"],
+        }
+        rows.append(row)
+
+    sort_key = "f1" if classification else "rmse"
+    rows.sort(key=lambda r: (r.get(sort_key) is None, r.get(sort_key, 0)), reverse=classification)
+
+    return jsonify({"ticker": ticker.upper(), "target": target, "comparison": rows})
 
 
 # ---------------------------------------------------------------------------

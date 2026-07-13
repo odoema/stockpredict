@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from services import backtest_service, feature_service, indicator_service, model_service, portfolio_service
+from services import backtest_service, deep_learning_service, feature_service, indicator_service, model_service, portfolio_service
 
 
 @pytest.fixture
@@ -131,3 +131,41 @@ def test_portfolio_comparison_computes_sane_metrics(synthetic_ohlcv):
     corr = result["correlation"]
     assert corr["labels"] == ["IVV", "SPY"]
     assert -1.0 <= corr["matrix"][0][1] <= 1.0
+
+
+@pytest.mark.parametrize("model_key", ["lstm", "gru"])
+def test_deep_learning_classification(synthetic_ohlcv, model_key):
+    ind_df = indicator_service.compute_indicators(synthetic_ohlcv, ["sma", "ema", "rsi", "atr"])
+    dataset = feature_service.assemble_dataset(synthetic_ohlcv, ind_df, "next_day_direction")
+    feature_cols = [c for c in dataset.columns if c != "target"]
+
+    result = deep_learning_service.train_and_evaluate(
+        dataset, feature_cols, "next_day_direction", model_key, window=10, epochs=3
+    )
+    assert "accuracy" in result["metrics"]
+    assert 0.0 <= result["metrics"]["accuracy"] <= 1.0
+
+    prediction = deep_learning_service.predict_latest(
+        result["_model_object"], result["_scaler"], dataset, feature_cols, "next_day_direction", window=10
+    )
+    assert prediction["signal"] in {"BUY", "SELL", "HOLD"}
+    assert 0.0 <= prediction["probability_up"] <= 1.0
+
+
+def test_deep_learning_regression(synthetic_ohlcv):
+    ind_df = indicator_service.compute_indicators(synthetic_ohlcv, ["sma", "ema"])
+    dataset = feature_service.assemble_dataset(synthetic_ohlcv, ind_df, "next_day_return")
+    feature_cols = [c for c in dataset.columns if c != "target"]
+
+    result = deep_learning_service.train_and_evaluate(
+        dataset, feature_cols, "next_day_return", "lstm", window=10, epochs=3
+    )
+    assert "rmse" in result["metrics"]
+
+
+def test_deep_learning_rejects_unknown_model(synthetic_ohlcv):
+    ind_df = indicator_service.compute_indicators(synthetic_ohlcv, ["sma"])
+    dataset = feature_service.assemble_dataset(synthetic_ohlcv, ind_df, "next_day_direction")
+    feature_cols = [c for c in dataset.columns if c != "target"]
+    with pytest.raises(ValueError):
+        deep_learning_service.train_and_evaluate(dataset, feature_cols, "next_day_direction", "transformer")

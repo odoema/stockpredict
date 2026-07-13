@@ -5,11 +5,11 @@ notebook — data ingestion, data quality checks, EDA, feature engineering,
 feature selection, model training/evaluation, and next-day prediction —
 for **any valid Yahoo Finance ticker**, not just IVV.
 
-This is **v3 (sprints 1–3)** of the full master spec: a working end-to-end
+This is **v4 (sprints 1–4)** of the full master spec: a working end-to-end
 pipeline with a real dashboard, real data quality and EDA pages, real
-indicators, real feature selection, a 12-model registry, a full
-backtesting page, and multi-ticker portfolio comparison. See **Roadmap**
-below for what's planned next.
+indicators, real feature selection, a 14-model registry (12 tabular + 2
+deep learning), a full backtesting page, and multi-ticker portfolio
+comparison. See **Roadmap** below for what's planned next.
 
 ---
 
@@ -41,6 +41,13 @@ below for what's planned next.
   models (Logistic/Linear Regression, SVM, KNN, Naive Bayes, MLP) are
   wrapped in a `StandardScaler` pipeline; tree/boosting models are used
   as-is (scale-invariant).
+- **2 deep learning models**: LSTM and GRU, trained on a sliding window of
+  sequential trading days (default 20) rather than flat feature rows.
+  Feature scaling is fit on the training slice only to avoid lookahead
+  leakage. Configurable `window` and `epochs` via the API; noticeably
+  slower to train than the 12 tabular models, so they're excluded from the
+  default "Compare All Models" run (but can be added to it explicitly) and
+  aren't yet wired into the Backtesting page — see Roadmap.
 - **Run All / Compare Models**: side-by-side comparison table (accuracy,
   precision, recall, F1, ROC AUC for classification; RMSE, MAE, R² for
   regression; plus train/predict time), best model highlighted.
@@ -76,7 +83,8 @@ StockPredict/
     indicator_service.py# 19 technical indicators, grouped registry
     eda_service.py       # Data quality + EDA computations
     feature_service.py   # Target construction + feature selection
-    model_service.py     # Train/eval/predict/compare for the 12 models
+    model_service.py     # Train/eval/predict/compare for the 12 tabular models
+    deep_learning_service.py # LSTM/GRU: sequence windowing, train/eval/predict
     backtest_service.py  # Strategy simulation + performance metrics
     portfolio_service.py # Multi-ticker performance, correlation, risk metrics
   templates/            # Jinja2 page shells (base, index, dashboard, ...)
@@ -101,8 +109,8 @@ and to scale horizontally later — no server-side session state to manage.
 | `/api/data`             | POST   | OHLCV history + data quality report                     |
 | `/api/eda`              | POST   | Returns analysis + OHLCV correlation                     |
 | `/api/features`         | POST   | Assembled dataset + feature selection results             |
-| `/api/train`            | POST   | Train one model, evaluate, predict next day                |
-| `/api/train/compare`    | POST   | Train several models, return a ranked comparison table       |
+| `/api/train`            | POST   | Train one model (tabular or LSTM/GRU), evaluate, predict next day |
+| `/api/train/compare`    | POST   | Train several models, return a ranked comparison table (tabular by default) |
 | `/api/backtest`         | POST   | Simulate a strategy from model signals, return metrics + equity curve |
 | `/api/portfolio`        | POST   | Compare 2-8 tickers: performance, correlation, risk metrics    |
 | `/api/export`           | POST   | Download CSV/JSON of the raw + indicator dataset               |
@@ -182,14 +190,20 @@ host you choose must have outbound internet access.
 These sprints intentionally scoped to a working core rather than a
 half-finished everything. Still planned:
 
-- LSTM/GRU/Transformer as an optional deep-learning track (needs a
-  sequence-windowed training loop, different from the tabular fit/predict
-  interface the other 12 models share).
+- Wire LSTM/GRU into the Backtesting page (currently tabular-models-only,
+  since the backtest engine calls `model.predict()` on a plain feature
+  DataFrame rather than a scaled sequence window).
+- Transformer as a third deep-learning option.
 - Additional feature selection: Recursive Feature Elimination, Boruta, PCA.
 - Hyperparameter tuning UI, learning/validation curves.
 - PDF/PNG/`.pkl` export.
 - Ticker autocomplete backed by a real symbol search API (currently a
   static shortlist + free-text ticker input).
+
+**Deployment note:** LSTM/GRU training can take longer than the default
+30-second web request timeout on some hosts. The included `Procfile`
+already sets `gunicorn --timeout 120` to accommodate this — increase
+further if you raise `epochs` or `window` significantly.
 
 ---
 

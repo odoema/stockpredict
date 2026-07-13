@@ -44,6 +44,8 @@ class Config:
         "knn": "K-Nearest Neighbors",
         "naive_bayes": "Naive Bayes",
         "mlp": "MLP Neural Network",
+        "lstm": "LSTM (Deep Learning)",
+        "gru": "GRU (Deep Learning)",
     }
 
 

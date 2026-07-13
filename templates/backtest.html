@@ -30,7 +30,7 @@
       <div class="sp-control-group">
         <label for="model-select">Model</label>
         <select id="model-select" class="sp-input">
-          {% for key, label in model_registry.items() %}
+          {% for key, label in model_registry.items() if key not in ['lstm', 'gru'] %}
           <option value="{{ key }}" {{ 'selected' if key == 'random_forest' }}>{{ label }}</option>
           {% endfor %}
         </select>
